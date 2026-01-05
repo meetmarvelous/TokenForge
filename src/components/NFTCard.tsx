@@ -20,6 +20,7 @@ interface NFTCardProps {
   onCancel?: () => void
   onList?: () => void
   isProcessing?: boolean
+  accountAddress?: string
 }
 
 export function NFTCard({
@@ -34,7 +35,8 @@ export function NFTCard({
   onBuy,
   onCancel,
   onList,
-  isProcessing
+  isProcessing,
+  accountAddress
 }: NFTCardProps) {
   // Helper to format address
   const formatAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`
@@ -127,7 +129,7 @@ export function NFTCard({
 
         <div className="pt-2">
           {isListed ? (
-            seller === owner ? ( // If viewing own listing
+            accountAddress && seller && accountAddress.toLowerCase() === seller.toLowerCase() ? (
               <button
                 onClick={onCancel}
                 disabled={isProcessing}
@@ -145,13 +147,18 @@ export function NFTCard({
               </button>
             )
           ) : (
-            <button
-              onClick={onList}
-              disabled={isProcessing}
-              className="w-full bg-white/10 hover:bg-white/20 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center"
-            >
-              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : "List for Sale"}
-            </button>
+            accountAddress && owner && accountAddress.toLowerCase() === owner.toLowerCase() ? (
+              <button
+                onClick={onList}
+                disabled={isProcessing}
+                className="w-full bg-white/10 hover:bg-white/20 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center"
+              >
+                {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : "List for Sale"}
+              </button>
+            ) : (
+               // Not listed, and user is not owner (or not connected) -> Show nothing or "Not Listed"
+               <div className="text-center text-gray-500 text-sm py-2">Not Listed</div>
+            )
           )}
         </div>
       </div>
