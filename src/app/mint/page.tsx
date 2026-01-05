@@ -7,9 +7,7 @@ import { Button } from '@/components/ui/button' // Placeholder
 import { ConnectWallet } from '@/components/ConnectWallet'
 import { Loader2, Upload } from 'lucide-react'
 
-// We'll need the ABI and address. For now, using placeholders.
-const NFT_ADDRESS = "0x..." 
-const NFT_ABI = [] as const
+import { NFT_ADDRESS, NFT_ABI } from '@/config/contracts'
 
 export default function MintPage() {
   const { isConnected } = useAccount()

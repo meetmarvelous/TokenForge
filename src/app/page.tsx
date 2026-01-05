@@ -2,6 +2,7 @@
 
 import { useReadContract } from 'wagmi'
 import { useState } from 'react'
+import { MARKETPLACE_ADDRESS, MARKETPLACE_ABI } from '@/config/contracts'
 
 export default function MarketplacePage() {
   // TODO: Fetch listings from contract
