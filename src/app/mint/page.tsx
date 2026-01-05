@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { parseEther } from 'viem'
 import { Button } from '@/components/ui/button' // Placeholder
@@ -27,11 +27,42 @@ export default function MintPage() {
     }
   }
 
-  const uploadToIPFS = async (file: File) => {
-    // TODO: Implement actual IPFS upload (e.g., via Pinata API or similar)
-    // For now, returning a mock URI
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    return `ipfs://mock-cid/${file.name}`
+  const uploadToPinata = async (file: File) => {
+    const jwt = process.env.NEXT_PUBLIC_PINATA_JWT
+    if (!jwt) throw new Error("Missing Pinata JWT. Please set NEXT_PUBLIC_PINATA_JWT in .env.local")
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const res = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${jwt}`,
+      },
+      body: formData,
+    })
+
+    if (!res.ok) throw new Error(`Pinata upload failed: ${res.statusText}`)
+    const json = await res.json()
+    return `ipfs://${json.IpfsHash}`
+  }
+
+  const uploadMetadataToPinata = async (metadata: any) => {
+    const jwt = process.env.NEXT_PUBLIC_PINATA_JWT
+    if (!jwt) throw new Error("Missing Pinata JWT")
+
+    const res = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${jwt}`,
+      },
+      body: JSON.stringify(metadata),
+    })
+
+    if (!res.ok) throw new Error(`Pinata metadata upload failed: ${res.statusText}`)
+    const json = await res.json()
+    return `ipfs://${json.IpfsHash}`
   }
 
   const handleMint = async (e: React.FormEvent) => {
@@ -40,28 +71,43 @@ export default function MintPage() {
 
     try {
       setUploading(true)
-      const imageURI = await uploadToIPFS(file)
+      
+      // 1. Upload Image
+      const imageURI = await uploadToPinata(file)
+      console.log("Image uploaded:", imageURI)
+
+      // 2. Upload Metadata
       const metadata = {
         name,
         description,
         image: imageURI
       }
-      // Upload metadata to IPFS...
-      const tokenURI = `ipfs://mock-metadata-cid` 
+      const tokenURI = await uploadMetadataToPinata(metadata)
+      console.log("Metadata uploaded:", tokenURI)
       
       setUploading(false)
       
+      // 3. Mint NFT
       writeContract({
         address: NFT_ADDRESS,
         abi: NFT_ABI,
         functionName: 'mintNFT',
         args: [tokenURI],
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error minting:", error)
+      alert(error.message || "Error minting NFT")
       setUploading(false)
     }
   }
+
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return null
 
   if (!isConnected) {
     return (

@@ -1,5 +1,7 @@
 'use client'
 
+import { useState, useEffect } from 'react'
+
 import { parseEther, formatEther } from 'viem'
 import { Button } from '@/components/ui/button' // Placeholder
 import { Loader2 } from 'lucide-react'
@@ -37,23 +39,66 @@ export function NFTCard({
   // Helper to format address
   const formatAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`
 
-  // Helper to handle IPFS URIs
-  const resolveIPFS = (uri: string) => {
-    if (uri.startsWith('ipfs://')) {
-      return `https://ipfs.io/ipfs/${uri.replace('ipfs://', '')}`
+  // Gateways to try in order
+  const GATEWAYS = [
+    'https://gateway.pinata.cloud/ipfs/',
+    'https://dweb.link/ipfs/',
+    'https://ipfs.io/ipfs/'
+  ]
+
+  const [currentGatewayIndex, setCurrentGatewayIndex] = useState(0)
+  const [imgSrc, setImgSrc] = useState('')
+  const [hasError, setHasError] = useState(false)
+
+  // Initialize image source
+  useEffect(() => {
+    if (!imageURI) {
+      setImgSrc('')
+      return
     }
-    return uri
+
+    if (imageURI.startsWith('ipfs://')) {
+      const cid = imageURI.replace('ipfs://', '')
+      setImgSrc(`${GATEWAYS[0]}${cid}`)
+      setCurrentGatewayIndex(0)
+      setHasError(false)
+    } else {
+      setImgSrc(imageURI)
+    }
+  }, [imageURI])
+
+  const handleImageError = () => {
+    if (imageURI.startsWith('ipfs://')) {
+      const nextIndex = currentGatewayIndex + 1
+      if (nextIndex < GATEWAYS.length) {
+        const cid = imageURI.replace('ipfs://', '')
+        setImgSrc(`${GATEWAYS[nextIndex]}${cid}`)
+        setCurrentGatewayIndex(nextIndex)
+      } else {
+        setHasError(true)
+      }
+    } else {
+      setHasError(true)
+    }
   }
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden hover:border-blue-500/30 transition-all group">
-      <div className="aspect-square relative bg-black/20">
+      <div className="aspect-square relative bg-black/20 flex items-center justify-center">
         {/* In a real app, use Next.js Image with a proper loader or external domain config */}
-        <img 
-          src={resolveIPFS(imageURI)} 
-          alt={name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        />
+        {imgSrc && !hasError ? (
+          <img 
+            src={imgSrc} 
+            alt={name}
+            onError={handleImageError}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <div className="text-gray-500 text-sm flex flex-col items-center gap-2">
+            <span className="text-2xl">🖼️</span>
+            <span>No Image</span>
+          </div>
+        )}
       </div>
       
       <div className="p-4 space-y-3">
